@@ -64,9 +64,14 @@
       border-radius: 24px;
       padding: 40px;
       width: 100%;
-      max-width: 500px;
+      max-width: 600px;
       border: 1px solid rgba(255, 255, 255, 0.1);
       box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+      transition: max-width 0.3s ease;
+    }
+
+    .call-panel.in-call {
+      max-width: 1000px;
     }
 
     .call-type-selector {
@@ -1284,6 +1289,7 @@
       document.getElementById('queueState').classList.remove('visible');
       document.getElementById('callState').style.display = 'none';
       document.getElementById('startCallBtn').disabled = false;
+      document.querySelector('.call-panel').classList.remove('in-call');
       hideStatus();
     }
 
@@ -1305,6 +1311,9 @@
       document.getElementById('initialState').style.display = 'none';
       document.getElementById('queueState').classList.remove('visible');
       document.getElementById('callState').style.display = 'block';
+      
+      // Make panel wider for video call
+      document.querySelector('.call-panel').classList.add('in-call');
       
       document.getElementById('agentName').textContent = agentName;
       document.getElementById('agentAvatar').textContent = agentName.charAt(0).toUpperCase();
