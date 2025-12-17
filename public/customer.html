@@ -605,21 +605,32 @@
     /* Chat Panel */
     .chat-panel {
       display: none;
-      position: absolute;
-      bottom: 80px;
+      position: fixed;
+      bottom: 20px;
       right: 20px;
-      width: 320px;
-      max-height: 400px;
+      width: 340px;
+      max-height: 450px;
       background: #1a1a2e;
       border-radius: 16px;
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.15);
       flex-direction: column;
       overflow: hidden;
-      z-index: 100;
+      z-index: 1000;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
     }
 
     .chat-panel.visible {
       display: flex;
+    }
+
+    @media (max-width: 600px) {
+      .chat-panel {
+        width: calc(100% - 20px);
+        left: 10px;
+        right: 10px;
+        bottom: 10px;
+        max-height: 60vh;
+      }
     }
 
     .chat-header {
@@ -927,22 +938,6 @@
             </button>
           </div>
 
-          <!-- Chat Panel -->
-          <div class="chat-panel" id="chatPanel">
-            <div class="chat-header">
-              <span>Chat</span>
-              <button class="chat-close" onclick="toggleChat()">×</button>
-            </div>
-            <div class="chat-messages" id="chatMessages"></div>
-            <div class="chat-input-area">
-              <input type="text" id="chatInput" class="chat-input" placeholder="Nachricht eingeben..." onkeypress="handleChatKeypress(event)">
-              <button class="chat-send" onclick="sendChatMessage()">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                </svg>
-              </button>
-            </div>
-          </div>
         </div>
 
         <div class="status-message" id="statusMessage"></div>
@@ -952,6 +947,23 @@
     <footer class="footer">
       <p>© 2024 kamdi24 - Kundenservice</p>
     </footer>
+  </div>
+
+  <!-- Chat Panel (Fixed Position) -->
+  <div class="chat-panel" id="chatPanel">
+    <div class="chat-header">
+      <span>💬 Chat mit Berater</span>
+      <button class="chat-close" onclick="toggleChat()">×</button>
+    </div>
+    <div class="chat-messages" id="chatMessages"></div>
+    <div class="chat-input-area">
+      <input type="text" id="chatInput" class="chat-input" placeholder="Nachricht eingeben..." onkeypress="handleChatKeypress(event)">
+      <button class="chat-send" onclick="sendChatMessage()">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+        </svg>
+      </button>
+    </div>
   </div>
 
   <script>
