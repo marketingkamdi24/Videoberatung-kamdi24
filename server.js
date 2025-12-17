@@ -247,6 +247,41 @@ io.on('connection', (socket) => {
     }
   });
 
+  // Chat message
+  socket.on('chat:message', (data) => {
+    const { callId, message, sender, senderName } = data;
+    const call = activeCalls.get(callId);
+    if (!call) return;
+    
+    const chatMessage = {
+      id: uuidv4(),
+      message,
+      sender, // 'customer' or 'agent'
+      senderName,
+      timestamp: new Date().toISOString()
+    };
+    
+    // Send to customer
+    const customer = customers.get(call.customerId);
+    if (customer) {
+      const customerSocket = io.sockets.sockets.get(customer.socketId);
+      if (customerSocket) {
+        customerSocket.emit('chat:message', chatMessage);
+      }
+    }
+    
+    // Send to all agents in the call
+    call.agents.forEach(a => {
+      const agent = agents.get(a.id);
+      if (agent) {
+        const agentSocket = io.sockets.sockets.get(agent.socketId);
+        if (agentSocket) {
+          agentSocket.emit('chat:message', chatMessage);
+        }
+      }
+    });
+  });
+
   // End call
   socket.on('call:end', (data) => {
     const { callId } = data;
