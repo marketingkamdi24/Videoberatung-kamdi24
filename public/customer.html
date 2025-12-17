@@ -1,0 +1,1204 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>kamdi24 - Kundenservice Anruf</title>
+  <script src="https://unpkg.com/peerjs@1.5.5/dist/peerjs.min.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      min-height: 100vh;
+      color: #fff;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 20px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .header {
+      text-align: center;
+      padding: 30px 0;
+    }
+
+    .logo {
+      font-size: 2.5rem;
+      font-weight: 700;
+      background: linear-gradient(90deg, #e94560, #ff6b6b);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 10px;
+    }
+
+    .subtitle {
+      color: #a0a0a0;
+      font-size: 1.1rem;
+    }
+
+    .main-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .call-panel {
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(10px);
+      border-radius: 24px;
+      padding: 40px;
+      width: 100%;
+      max-width: 500px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    }
+
+    .call-type-selector {
+      display: flex;
+      gap: 15px;
+      margin-bottom: 30px;
+    }
+
+    .call-type-btn {
+      flex: 1;
+      padding: 20px;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      background: transparent;
+      border-radius: 16px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      color: #fff;
+    }
+
+    .call-type-btn:hover {
+      border-color: #e94560;
+      background: rgba(233, 69, 96, 0.1);
+    }
+
+    .call-type-btn.active {
+      border-color: #e94560;
+      background: rgba(233, 69, 96, 0.2);
+    }
+
+    .call-type-btn svg {
+      width: 40px;
+      height: 40px;
+      margin-bottom: 10px;
+    }
+
+    .call-type-btn span {
+      display: block;
+      font-size: 1rem;
+      font-weight: 500;
+    }
+
+    .call-btn {
+      width: 100%;
+      padding: 20px;
+      font-size: 1.2rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 16px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+    }
+
+    .call-btn.start {
+      background: linear-gradient(135deg, #00c853, #00e676);
+      color: #fff;
+    }
+
+    .call-btn.start:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 30px rgba(0, 200, 83, 0.4);
+    }
+
+    .call-btn.end {
+      background: linear-gradient(135deg, #e94560, #ff6b6b);
+      color: #fff;
+    }
+
+    .call-btn.end:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 30px rgba(233, 69, 96, 0.4);
+    }
+
+    .call-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none !important;
+      box-shadow: none !important;
+    }
+
+    .call-btn svg {
+      width: 24px;
+      height: 24px;
+    }
+
+    /* Queue Status */
+    .queue-status {
+      text-align: center;
+      padding: 30px;
+      display: none;
+    }
+
+    .queue-status.visible {
+      display: block;
+    }
+
+    .queue-position {
+      font-size: 4rem;
+      font-weight: 700;
+      color: #e94560;
+      margin-bottom: 10px;
+    }
+
+    .queue-text {
+      color: #a0a0a0;
+      font-size: 1.1rem;
+      margin-bottom: 20px;
+    }
+
+    .pulse-ring {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      background: rgba(233, 69, 96, 0.2);
+      margin: 0 auto 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    .pulse-ring svg {
+      width: 50px;
+      height: 50px;
+      color: #e94560;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.1); opacity: 0.7; }
+    }
+
+    /* Video Container */
+    .video-container {
+      display: none;
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+
+    .video-container.visible {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .video-wrapper {
+      position: relative;
+      background: #000;
+      border-radius: 16px;
+      overflow: hidden;
+      aspect-ratio: 4/3;
+    }
+
+    .video-wrapper video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .video-label {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      background: rgba(0, 0, 0, 0.7);
+      padding: 5px 12px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+    }
+
+    .video-wrapper.local {
+      grid-column: 1;
+    }
+
+    .video-wrapper.remote {
+      grid-column: 2;
+    }
+
+    /* Audio Only Mode */
+    .audio-only-indicator {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 16px;
+      margin-bottom: 20px;
+    }
+
+    .audio-only-indicator.visible {
+      display: flex;
+    }
+
+    .audio-wave {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      height: 60px;
+      margin-bottom: 20px;
+    }
+
+    .audio-wave span {
+      width: 6px;
+      background: #e94560;
+      border-radius: 3px;
+      animation: wave 1s ease-in-out infinite;
+    }
+
+    .audio-wave span:nth-child(1) { height: 20px; animation-delay: 0s; }
+    .audio-wave span:nth-child(2) { height: 35px; animation-delay: 0.1s; }
+    .audio-wave span:nth-child(3) { height: 50px; animation-delay: 0.2s; }
+    .audio-wave span:nth-child(4) { height: 35px; animation-delay: 0.3s; }
+    .audio-wave span:nth-child(5) { height: 20px; animation-delay: 0.4s; }
+
+    @keyframes wave {
+      0%, 100% { transform: scaleY(1); }
+      50% { transform: scaleY(1.5); }
+    }
+
+    /* Call Controls */
+    .call-controls {
+      display: none;
+      justify-content: center;
+      gap: 20px;
+      margin-top: 20px;
+    }
+
+    .call-controls.visible {
+      display: flex;
+    }
+
+    .control-btn {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s ease;
+    }
+
+    .control-btn svg {
+      width: 24px;
+      height: 24px;
+    }
+
+    .control-btn.mute {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+    }
+
+    .control-btn.mute:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .control-btn.mute.active {
+      background: #e94560;
+    }
+
+    .control-btn.end-call {
+      background: #e94560;
+      color: #fff;
+    }
+
+    .control-btn.end-call:hover {
+      background: #ff6b6b;
+      transform: scale(1.1);
+    }
+
+    /* Status Messages */
+    .status-message {
+      text-align: center;
+      padding: 15px;
+      border-radius: 12px;
+      margin-top: 20px;
+      display: none;
+    }
+
+    .status-message.visible {
+      display: block;
+    }
+
+    .status-message.info {
+      background: rgba(59, 130, 246, 0.2);
+      color: #60a5fa;
+    }
+
+    .status-message.success {
+      background: rgba(34, 197, 94, 0.2);
+      color: #4ade80;
+    }
+
+    .status-message.error {
+      background: rgba(239, 68, 68, 0.2);
+      color: #f87171;
+    }
+
+    /* Connected Agent Info */
+    .agent-info {
+      display: none;
+      align-items: center;
+      gap: 15px;
+      padding: 20px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 16px;
+      margin-bottom: 20px;
+    }
+
+    .agent-info.visible {
+      display: flex;
+    }
+
+    .agent-avatar {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #e94560, #ff6b6b);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      font-weight: 600;
+    }
+
+    .agent-details h3 {
+      font-size: 1.1rem;
+      margin-bottom: 4px;
+    }
+
+    .agent-details span {
+      color: #4ade80;
+      font-size: 0.9rem;
+    }
+
+    /* Call Timer */
+    .call-timer {
+      display: none;
+      justify-content: center;
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: #a0a0a0;
+      margin-bottom: 20px;
+    }
+
+    .call-timer.visible {
+      display: flex;
+    }
+
+    /* Footer */
+    .footer {
+      text-align: center;
+      padding: 20px;
+      color: #666;
+      font-size: 0.9rem;
+    }
+
+    /* Setup Form */
+    .setup-form {
+      margin-bottom: 25px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+      color: #ccc;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 14px 16px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 12px;
+      color: #fff;
+      font-size: 1rem;
+      transition: all 0.3s ease;
+    }
+
+    .form-input:focus {
+      outline: none;
+      border-color: #e94560;
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    .form-input::placeholder {
+      color: #888;
+    }
+
+    /* Toggle Switch */
+    .toggle-group {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 15px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+      margin-bottom: 15px;
+    }
+
+    .toggle-label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .toggle-label svg {
+      width: 24px;
+      height: 24px;
+      color: #888;
+    }
+
+    .toggle-label span {
+      font-weight: 500;
+    }
+
+    .toggle-switch {
+      position: relative;
+      width: 50px;
+      height: 26px;
+    }
+
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(255, 255, 255, 0.2);
+      transition: 0.3s;
+      border-radius: 26px;
+    }
+
+    .toggle-slider:before {
+      position: absolute;
+      content: "";
+      height: 20px;
+      width: 20px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: 0.3s;
+      border-radius: 50%;
+    }
+
+    .toggle-switch input:checked + .toggle-slider {
+      background-color: #e94560;
+    }
+
+    .toggle-switch input:checked + .toggle-slider:before {
+      transform: translateX(24px);
+    }
+
+    .toggle-hint {
+      font-size: 0.85rem;
+      color: #888;
+      margin-top: 5px;
+      padding-left: 34px;
+    }
+
+    /* No Media Indicator */
+    .no-media-indicator {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 16px;
+      margin-bottom: 20px;
+    }
+
+    .no-media-indicator.visible {
+      display: flex;
+    }
+
+    .no-media-indicator svg {
+      width: 60px;
+      height: 60px;
+      color: #888;
+      margin-bottom: 15px;
+    }
+
+    .no-media-indicator p {
+      color: #888;
+      text-align: center;
+    }
+
+    /* Customer Avatar in Call */
+    .customer-avatar-display {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 16px;
+      padding: 30px;
+      min-height: 200px;
+    }
+
+    .customer-avatar-display.visible {
+      display: flex;
+    }
+
+    .customer-avatar-large {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #3b82f6, #60a5fa);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+
+    .customer-avatar-name {
+      font-weight: 500;
+      color: #ccc;
+    }
+
+    /* Responsive */
+    @media (max-width: 600px) {
+      .call-panel {
+        padding: 25px;
+      }
+
+      .video-container.visible {
+        grid-template-columns: 1fr;
+      }
+
+      .video-wrapper.local,
+      .video-wrapper.remote {
+        grid-column: 1;
+      }
+
+      .call-type-btn {
+        padding: 15px;
+      }
+
+      .call-type-btn svg {
+        width: 30px;
+        height: 30px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <h1 class="logo">kamdi24</h1>
+      <p class="subtitle">Kundenservice - Wir sind für Sie da!</p>
+    </header>
+
+    <main class="main-content">
+      <div class="call-panel">
+        <!-- Initial State -->
+        <div id="initialState">
+          <!-- Name Input -->
+          <div class="setup-form">
+            <div class="form-group">
+              <label class="form-label" for="customerName">Ihr Name</label>
+              <input type="text" id="customerName" class="form-input" placeholder="Wie dürfen wir Sie nennen?" maxlength="50">
+            </div>
+          </div>
+
+          <!-- Call Type Selection -->
+          <div class="call-type-selector">
+            <button class="call-type-btn active" data-type="video" onclick="selectCallType('video')">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+              <span>Videoanruf</span>
+            </button>
+            <button class="call-type-btn" data-type="audio" onclick="selectCallType('audio')">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+              </svg>
+              <span>Sprachanruf</span>
+            </button>
+          </div>
+
+          <!-- Media Options -->
+          <div class="toggle-group" id="videoToggleGroup">
+            <div class="toggle-label">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+              <span>Kamera aktivieren</span>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="enableCamera" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <p class="toggle-hint" id="cameraHint">Sie können sich während des Anrufs zeigen</p>
+
+          <div class="toggle-group">
+            <div class="toggle-label">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+              </svg>
+              <span>Mikrofon aktivieren</span>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="enableMic" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <p class="toggle-hint">Ohne Mikrofon können Sie nur zuhören</p>
+
+          <button class="call-btn start" id="startCallBtn" onclick="startCall()" style="margin-top: 25px;">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+            </svg>
+            Jetzt anrufen
+          </button>
+        </div>
+
+        <!-- Queue State -->
+        <div class="queue-status" id="queueState">
+          <div class="pulse-ring">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+            </svg>
+          </div>
+          <div class="queue-position" id="queuePosition">1</div>
+          <p class="queue-text">Position in der Warteschlange</p>
+          <p class="queue-text" id="estimatedWait">Geschätzte Wartezeit: ~3 Minuten</p>
+          <button class="call-btn end" onclick="cancelCall()">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+            Anruf abbrechen
+          </button>
+        </div>
+
+        <!-- Call State -->
+        <div id="callState" style="display: none;">
+          <div class="agent-info visible" id="agentInfo">
+            <div class="agent-avatar" id="agentAvatar">M</div>
+            <div class="agent-details">
+              <h3 id="agentName">Mitarbeiter</h3>
+              <span>Verbunden</span>
+            </div>
+          </div>
+
+          <div class="call-timer visible" id="callTimer">00:00</div>
+
+          <div class="video-container" id="videoContainer">
+            <div class="video-wrapper local" id="localVideoWrapper">
+              <video id="localVideo" autoplay muted playsinline></video>
+              <span class="video-label">Sie</span>
+            </div>
+            <div class="customer-avatar-display" id="localAvatarDisplay">
+              <div class="customer-avatar-large" id="localAvatarLetter">K</div>
+              <span class="customer-avatar-name" id="localAvatarName">Kunde</span>
+            </div>
+            <div class="video-wrapper remote">
+              <video id="remoteVideo" autoplay playsinline></video>
+              <span class="video-label" id="remoteLabel">Mitarbeiter</span>
+            </div>
+          </div>
+
+          <div class="audio-only-indicator" id="audioIndicator">
+            <div class="audio-wave">
+              <span></span>
+              <span></span>
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+            <p>Sprachanruf aktiv</p>
+          </div>
+
+          <div class="no-media-indicator" id="noMediaIndicator">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+            <p>Sie schauen dem Gespräch zu<br><small>Kamera und Mikrofon sind deaktiviert</small></p>
+          </div>
+
+          <div class="call-controls visible">
+            <button class="control-btn mute" id="muteBtn" onclick="toggleMute()">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+              </svg>
+            </button>
+            <button class="control-btn mute" id="videoToggleBtn" onclick="toggleVideo()">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+            </button>
+            <button class="control-btn end-call" onclick="endCall()">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M5 3a2 2 0 00-2 2v1c0 8.284 6.716 15 15 15h1a2 2 0 002-2v-3.28a1 1 0 00-.684-.948l-4.493-1.498a1 1 0 00-1.21.502l-1.13 2.257a11.042 11.042 0 01-5.516-5.517l2.257-1.128a1 1 0 00.502-1.21L9.228 3.683A1 1 0 008.279 3H5z" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="status-message" id="statusMessage"></div>
+      </div>
+    </main>
+
+    <footer class="footer">
+      <p>© 2024 kamdi24 - Kundenservice</p>
+    </footer>
+  </div>
+
+  <script>
+    // State
+    let callType = 'video';
+    let peer = null;
+    let socket = null;
+    let localStream = null;
+    let currentCall = null;
+    let callId = null;
+    let callStartTime = null;
+    let timerInterval = null;
+    let isMuted = false;
+    let isVideoOff = false;
+    let customerName = '';
+    let enableCamera = true;
+    let enableMic = true;
+    const remotePeers = new Map();
+
+    // Initialize
+    function init() {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const host = window.location.host;
+      
+      socket = io();
+      
+      socket.on('connect', () => {
+        console.log('Socket connected');
+        initPeer();
+      });
+
+      socket.on('customer:queued', (data) => {
+        showQueueState(data.position, data.estimatedWait);
+      });
+
+      socket.on('queue:position', (data) => {
+        updateQueuePosition(data.position);
+      });
+
+      socket.on('call:connected', async (data) => {
+        console.log('Call connected:', data);
+        callId = data.callId;
+        showCallState(data.agentName);
+        
+        // The agent will initiate the call
+      });
+
+      socket.on('call:agent-joined', async (data) => {
+        console.log('Agent joined:', data);
+        showStatus(`${data.newAgentName} ist dem Gespräch beigetreten`, 'info');
+      });
+
+      socket.on('call:ended', () => {
+        console.log('Call ended');
+        endCallCleanup();
+        showStatus('Anruf beendet. Vielen Dank für Ihren Anruf!', 'success');
+        setTimeout(() => {
+          showInitialState();
+        }, 3000);
+      });
+
+      socket.on('disconnect', () => {
+        console.log('Socket disconnected');
+        showStatus('Verbindung unterbrochen. Bitte laden Sie die Seite neu.', 'error');
+      });
+    }
+
+    function initPeer() {
+      const host = window.location.hostname;
+      const port = window.location.port || (window.location.protocol === 'https:' ? 443 : 80);
+      const secure = window.location.protocol === 'https:';
+
+      peer = new Peer({
+        host: host,
+        port: port,
+        path: '/peerjs',
+        secure: secure,
+        debug: 2
+      });
+
+      peer.on('open', (id) => {
+        console.log('Peer ID:', id);
+      });
+
+      peer.on('call', async (call) => {
+        console.log('Incoming call from:', call.peer);
+        
+        try {
+          // Answer with local stream or empty stream for listen-only
+          let answerStream = localStream;
+          
+          // If no local stream, create an empty/silent stream
+          if (!answerStream) {
+            answerStream = createEmptyStream();
+          }
+          
+          call.answer(answerStream);
+          
+          call.on('stream', (remoteStream) => {
+            console.log('Received remote stream');
+            addRemoteStream(call.peer, remoteStream);
+          });
+
+          call.on('close', () => {
+            console.log('Call closed');
+            removeRemoteStream(call.peer);
+          });
+
+          call.on('error', (err) => {
+            console.error('Call error:', err);
+          });
+
+          remotePeers.set(call.peer, call);
+        } catch (err) {
+          console.error('Error answering call:', err);
+          showStatus('Fehler beim Annehmen des Anrufs: ' + err.message, 'error');
+        }
+      });
+
+      peer.on('error', (err) => {
+        console.error('Peer error:', err);
+        showStatus('Verbindungsfehler: ' + err.message, 'error');
+      });
+    }
+
+    // Create an empty/silent stream for listen-only mode
+    function createEmptyStream() {
+      const ctx = new AudioContext();
+      const oscillator = ctx.createOscillator();
+      const dst = ctx.createMediaStreamDestination();
+      oscillator.connect(dst);
+      oscillator.start();
+      const track = dst.stream.getAudioTracks()[0];
+      track.enabled = false; // Mute it
+      return new MediaStream([track]);
+    }
+
+    async function getMediaStream() {
+      // If both camera and mic are disabled, return null (listen-only mode)
+      if (!enableCamera && !enableMic) {
+        return null;
+      }
+
+      const constraints = {
+        audio: enableMic,
+        video: (callType === 'video' && enableCamera)
+      };
+
+      // If only requesting audio false and video false, return null
+      if (!constraints.audio && !constraints.video) {
+        return null;
+      }
+
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        return stream;
+      } catch (err) {
+        console.error('Error getting media:', err);
+        // If media fails, allow listen-only mode
+        if (err.name === 'NotAllowedError' || err.name === 'NotFoundError') {
+          console.log('Media not available, continuing in listen-only mode');
+          return null;
+        }
+        throw err;
+      }
+    }
+
+    function selectCallType(type) {
+      callType = type;
+      document.querySelectorAll('.call-type-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.type === type);
+      });
+      
+      // Show/hide camera toggle based on call type
+      const videoToggleGroup = document.getElementById('videoToggleGroup');
+      const cameraHint = document.getElementById('cameraHint');
+      if (type === 'audio') {
+        videoToggleGroup.style.display = 'none';
+        cameraHint.style.display = 'none';
+        enableCamera = false;
+      } else {
+        videoToggleGroup.style.display = 'flex';
+        cameraHint.style.display = 'block';
+        enableCamera = document.getElementById('enableCamera').checked;
+      }
+    }
+
+    async function startCall() {
+      try {
+        document.getElementById('startCallBtn').disabled = true;
+        showStatus('Verbindung wird hergestellt...', 'info');
+
+        // Get customer name
+        customerName = document.getElementById('customerName').value.trim() || 'Kunde';
+        
+        // Get media preferences
+        enableCamera = callType === 'video' && document.getElementById('enableCamera').checked;
+        enableMic = document.getElementById('enableMic').checked;
+
+        // Try to get media stream (may be null if both disabled)
+        try {
+          localStream = await getMediaStream();
+        } catch (mediaErr) {
+          console.log('Media error, continuing without media:', mediaErr);
+          localStream = null;
+        }
+        
+        if (localStream && callType === 'video' && enableCamera) {
+          document.getElementById('localVideo').srcObject = localStream;
+        }
+
+        socket.emit('customer:join', {
+          peerId: peer.id,
+          name: customerName,
+          callType: callType,
+          hasVideo: enableCamera && localStream && localStream.getVideoTracks().length > 0,
+          hasAudio: enableMic && localStream && localStream.getAudioTracks().length > 0
+        });
+
+      } catch (err) {
+        console.error('Error starting call:', err);
+        document.getElementById('startCallBtn').disabled = false;
+        showStatus('Fehler: ' + err.message, 'error');
+      }
+    }
+
+    function cancelCall() {
+      socket.emit('customer:cancel');
+      endCallCleanup();
+      showInitialState();
+      showStatus('Anruf abgebrochen', 'info');
+    }
+
+    function endCall() {
+      if (callId) {
+        socket.emit('call:end', { callId });
+      }
+      endCallCleanup();
+      showInitialState();
+    }
+
+    function endCallCleanup() {
+      if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+      }
+
+      remotePeers.forEach((call) => {
+        call.close();
+      });
+      remotePeers.clear();
+
+      if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+        localStream = null;
+      }
+
+      document.getElementById('localVideo').srcObject = null;
+      document.getElementById('remoteVideo').srcObject = null;
+
+      callId = null;
+      callStartTime = null;
+      isMuted = false;
+      isVideoOff = false;
+    }
+
+    function addRemoteStream(peerId, stream) {
+      console.log('Adding remote stream from:', peerId);
+      const remoteVideo = document.getElementById('remoteVideo');
+      remoteVideo.srcObject = stream;
+      
+      // Ensure video plays
+      remoteVideo.play().catch(err => {
+        console.log('Auto-play prevented, user interaction needed:', err);
+      });
+    }
+
+    function removeRemoteStream(peerId) {
+      // For simplicity, just clear the remote video
+      document.getElementById('remoteVideo').srcObject = null;
+    }
+
+    function toggleMute() {
+      if (localStream) {
+        const audioTracks = localStream.getAudioTracks();
+        audioTracks.forEach(track => {
+          track.enabled = !track.enabled;
+        });
+        isMuted = !isMuted;
+        document.getElementById('muteBtn').classList.toggle('active', isMuted);
+      }
+    }
+
+    function toggleVideo() {
+      if (localStream && callType === 'video') {
+        const videoTracks = localStream.getVideoTracks();
+        videoTracks.forEach(track => {
+          track.enabled = !track.enabled;
+        });
+        isVideoOff = !isVideoOff;
+        document.getElementById('videoToggleBtn').classList.toggle('active', isVideoOff);
+      }
+    }
+
+    // UI State Management
+    function showInitialState() {
+      document.getElementById('initialState').style.display = 'block';
+      document.getElementById('queueState').classList.remove('visible');
+      document.getElementById('callState').style.display = 'none';
+      document.getElementById('startCallBtn').disabled = false;
+      hideStatus();
+    }
+
+    function showQueueState(position, estimatedWait) {
+      document.getElementById('initialState').style.display = 'none';
+      document.getElementById('queueState').classList.add('visible');
+      document.getElementById('callState').style.display = 'none';
+      updateQueuePosition(position);
+      document.getElementById('estimatedWait').textContent = 
+        `Geschätzte Wartezeit: ~${estimatedWait} Minuten`;
+      hideStatus();
+    }
+
+    function updateQueuePosition(position) {
+      document.getElementById('queuePosition').textContent = position;
+    }
+
+    function showCallState(agentName) {
+      document.getElementById('initialState').style.display = 'none';
+      document.getElementById('queueState').classList.remove('visible');
+      document.getElementById('callState').style.display = 'block';
+      
+      document.getElementById('agentName').textContent = agentName;
+      document.getElementById('agentAvatar').textContent = agentName.charAt(0).toUpperCase();
+
+      // Set up local avatar display
+      document.getElementById('localAvatarLetter').textContent = customerName.charAt(0).toUpperCase();
+      document.getElementById('localAvatarName').textContent = customerName;
+
+      const hasLocalVideo = localStream && localStream.getVideoTracks().length > 0 && enableCamera;
+      const hasLocalAudio = localStream && localStream.getAudioTracks().length > 0;
+
+      if (callType === 'video') {
+        document.getElementById('videoContainer').classList.add('visible');
+        document.getElementById('audioIndicator').classList.remove('visible');
+        document.getElementById('noMediaIndicator').classList.remove('visible');
+        
+        // Show video or avatar based on camera setting
+        if (hasLocalVideo) {
+          document.getElementById('localVideoWrapper').style.display = 'block';
+          document.getElementById('localAvatarDisplay').classList.remove('visible');
+        } else {
+          document.getElementById('localVideoWrapper').style.display = 'none';
+          document.getElementById('localAvatarDisplay').classList.add('visible');
+        }
+        
+        document.getElementById('videoToggleBtn').style.display = hasLocalVideo ? 'flex' : 'none';
+      } else {
+        document.getElementById('videoContainer').classList.remove('visible');
+        
+        if (hasLocalAudio) {
+          document.getElementById('audioIndicator').classList.add('visible');
+          document.getElementById('noMediaIndicator').classList.remove('visible');
+        } else {
+          document.getElementById('audioIndicator').classList.remove('visible');
+          document.getElementById('noMediaIndicator').classList.add('visible');
+        }
+        
+        document.getElementById('videoToggleBtn').style.display = 'none';
+      }
+
+      // Show/hide mute button based on mic availability
+      document.getElementById('muteBtn').style.display = hasLocalAudio ? 'flex' : 'none';
+
+      startTimer();
+      hideStatus();
+    }
+
+    function startTimer() {
+      callStartTime = new Date();
+      timerInterval = setInterval(() => {
+        const elapsed = Math.floor((new Date() - callStartTime) / 1000);
+        const minutes = Math.floor(elapsed / 60).toString().padStart(2, '0');
+        const seconds = (elapsed % 60).toString().padStart(2, '0');
+        document.getElementById('callTimer').textContent = `${minutes}:${seconds}`;
+      }, 1000);
+    }
+
+    function showStatus(message, type) {
+      const el = document.getElementById('statusMessage');
+      el.textContent = message;
+      el.className = `status-message visible ${type}`;
+    }
+
+    function hideStatus() {
+      document.getElementById('statusMessage').classList.remove('visible');
+    }
+
+    // Event listeners for toggles
+    document.getElementById('enableCamera').addEventListener('change', function() {
+      enableCamera = this.checked;
+    });
+
+    document.getElementById('enableMic').addEventListener('change', function() {
+      enableMic = this.checked;
+    });
+
+    // Start
+    init();
+  </script>
+</body>
+</html>

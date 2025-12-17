@@ -1,0 +1,19 @@
+{
+  "name": "kamdi24-call-service",
+  "version": "1.0.0",
+  "description": "Video and Voice Call Service for kamdi24 Customer Support",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "peer": "^1.0.2",
+    "socket.io": "^4.7.2",
+    "uuid": "^9.0.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
